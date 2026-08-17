@@ -116,10 +116,18 @@ if [[ -L "$CONFIG_DIR" ]]; then
     ok "symlink reapontado (era $alvo)"
   fi
 elif [[ -e "$CONFIG_DIR" ]]; then
-  backup="$CONFIG_DIR.bak-$(date +%Y%m%d%H%M%S)"
-  mv "$CONFIG_DIR" "$backup"
-  ln -sfn "$ESTEIRA_HOME/opencode" "$CONFIG_DIR"
-  ok "config antiga salva em $backup"
+  # Config gerada pelo proprio opencode no primeiro run nao tem agentes nem
+  # comandos — nao vale um backup, so vira lixo em toda maquina nova.
+  if [[ ! -d "$CONFIG_DIR/agents" && ! -d "$CONFIG_DIR/commands" && ! -d "$CONFIG_DIR/agent" ]]; then
+    rm -rf "$CONFIG_DIR"
+    ln -sfn "$ESTEIRA_HOME/opencode" "$CONFIG_DIR"
+    ok "config default do opencode substituida pela esteira"
+  else
+    backup="$CONFIG_DIR.bak-$(date +%Y%m%d%H%M%S)"
+    mv "$CONFIG_DIR" "$backup"
+    ln -sfn "$ESTEIRA_HOME/opencode" "$CONFIG_DIR"
+    ok "config antiga salva em $backup"
+  fi
 else
   ln -sfn "$ESTEIRA_HOME/opencode" "$CONFIG_DIR"
   ok "symlink criado"
