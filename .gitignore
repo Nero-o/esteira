@@ -1,0 +1,8 @@
+# nunca versionar credencial ou estado local
+auth.json
+*.log
+node_modules/
+package.json
+package-lock.json
+bun.lock
+.DS_Store

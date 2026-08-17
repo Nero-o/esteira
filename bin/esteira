@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+# esteira — controle da esteira multi-IA
+#
+#   esteira sync     puxa do git e reinstala (use ao chegar numa maquina)
+#   esteira save     commita e envia suas mudancas de config
+#   esteira status   o que esta instalado, logado e carregado aqui
+#   esteira edit     abre a pasta de config no seu editor
+#   esteira doctor   diagnostica o que esta quebrado
+
+set -euo pipefail
+
+ESTEIRA_HOME="${ESTEIRA_HOME:-$HOME/.esteira}"
+
+if [[ -t 1 ]]; then
+  B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; D=$'\033[2m'; Z=$'\033[0m'
+else
+  B=""; G=""; Y=""; R=""; D=""; Z=""
+fi
+ok()   { echo "${G}  ok${Z}  $*"; }
+bad()  { echo "${R}  !!${Z}  $*"; }
+warn() { echo "${Y}  ->${Z}  $*"; }
+info() { echo "${D}   ·${Z}  $*"; }
+has()  { command -v "$1" >/dev/null 2>&1; }
+
+cmd_sync() {
+  echo "${B}sincronizando${Z}"
+  if [[ -d "$ESTEIRA_HOME/.git" ]]; then
+    git -C "$ESTEIRA_HOME" pull --ff-only
+  else
+    warn "sem remote configurado — nada para puxar"
+  fi
+  bash "$ESTEIRA_HOME/install.sh" --skip-clis
+}
+
+cmd_save() {
+  [[ -d "$ESTEIRA_HOME/.git" ]] || { bad "sem repo git em $ESTEIRA_HOME"; exit 1; }
+  local msg="${1:-config: ajuste na esteira}"
+  git -C "$ESTEIRA_HOME" add -A
+  if git -C "$ESTEIRA_HOME" diff --cached --quiet; then
+    ok "nada mudou"
+    return
+  fi
+  git -C "$ESTEIRA_HOME" commit -m "$msg"
+  git -C "$ESTEIRA_HOME" push && ok "enviado — rode 'esteira sync' nas outras maquinas"
+}
+
+cmd_status() {
+  echo "${B}esteira${Z}  $ESTEIRA_HOME"
+  if [[ -d "$ESTEIRA_HOME/.git" ]]; then
+    info "$(git -C "$ESTEIRA_HOME" log -1 --format='%h %s  (%ar)' 2>/dev/null)"
+    local sujo; sujo="$(git -C "$ESTEIRA_HOME" status --porcelain | wc -l | tr -d ' ')"
+    [[ "$sujo" != "0" ]] && warn "$sujo arquivo(s) sem commit — 'esteira save'" || true
+  fi
+
+  echo
+  echo "${B}binarios${Z}"
+  for c in opencode claude codex; do
+    has "$c" && ok "$(printf '%-9s' "$c") $($c --version 2>/dev/null | head -1)" || bad "$c ausente"
+  done
+
+  echo
+  echo "${B}config${Z}"
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
+  if [[ -L "$cfg" ]]; then
+    ok "ligada -> $(readlink -f "$cfg")"
+  elif [[ -e "$cfg" ]]; then
+    bad "$cfg existe mas nao e symlink — rode: bash $ESTEIRA_HOME/install.sh"
+  else
+    bad "$cfg nao existe — rode: bash $ESTEIRA_HOME/install.sh"
+  fi
+
+  echo
+  echo "${B}agentes${Z}"
+  opencode agent list 2>/dev/null \
+    | grep -E '^(arquiteto|mapeador|cetico|executor|revisor) \(' | sed 's/^/       /' \
+    || bad "nenhum agente da esteira carregado"
+
+  echo
+  echo "${B}credenciais${Z}"
+  opencode providers list 2>/dev/null | sed -n '2,20p' | sed 's/^/  /'
+}
+
+cmd_edit() {
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
+  "${EDITOR:-${VISUAL:-code}}" "$cfg" 2>/dev/null || { echo "$cfg"; ls "$cfg"; }
+}
+
+cmd_doctor() {
+  local falhas=0
+  echo "${B}diagnostico${Z}"
+
+  has opencode || { bad "opencode ausente"; falhas=$((falhas+1)); }
+
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
+  [[ -L "$cfg" && -e "$cfg" ]] || { bad "config nao ligada ao repo"; falhas=$((falhas+1)); }
+
+  if out="$(opencode agent list 2>&1)"; then
+    for a in arquiteto mapeador cetico executor revisor; do
+      grep -qE "^$a \(" <<<"$out" || { bad "agente '$a' nao carregou"; falhas=$((falhas+1)); }
+    done
+  else
+    bad "config invalida:"; echo "$out" | head -4 | sed 's/^/       /'; falhas=$((falhas+1))
+  fi
+
+  local auth="$HOME/.local/share/opencode/auth.json"
+  if [[ ! -f "$auth" ]]; then
+    bad "nenhum provedor logado — opencode providers login -p anthropic"
+    falhas=$((falhas+1))
+  else
+    for p in anthropic openai; do
+      grep -q "\"$p\"" "$auth" || { warn "provedor '$p' sem login — opencode providers login -p $p"; }
+    done
+  fi
+
+  # modelos referenciados pelos agentes existem no catalogo do login atual?
+  if has opencode; then
+    local disponiveis; disponiveis="$(opencode models 2>/dev/null || true)"
+    if [[ -n "$disponiveis" ]]; then
+      grep -h '^model:' "$ESTEIRA_HOME"/opencode/agents/*.md | awk '{print $2}' | sort -u | while read -r m; do
+        grep -qF "$m" <<<"$disponiveis" \
+          && ok "modelo $m disponivel" \
+          || warn "modelo $m indisponivel com o login atual — troque a linha 'model:' ou logue no provedor"
+      done
+    fi
+  fi
+
+  has claude || warn "claude ausente — /duelo roda so com metade"
+  has codex  || warn "codex ausente — /duelo roda so com metade"
+
+  echo
+  [[ "$falhas" == "0" ]] && ok "sem falhas bloqueantes" || bad "$falhas problema(s) — rode: bash $ESTEIRA_HOME/install.sh"
+}
+
+case "${1:-status}" in
+  sync)   shift; cmd_sync "$@" ;;
+  save)   shift; cmd_save "$@" ;;
+  status) cmd_status ;;
+  edit)   cmd_edit ;;
+  doctor) cmd_doctor ;;
+  -h|--help|help) sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "comando desconhecido: $1"; sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac
