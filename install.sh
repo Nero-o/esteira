@@ -56,7 +56,7 @@ elif [[ -d "$ESTEIRA_HOME" && -f "$ESTEIRA_HOME/opencode/opencode.jsonc" ]]; the
   ok "usando copia local em $ESTEIRA_HOME (ainda sem remote)"
 else
   has git || die "git nao encontrado"
-  [[ -n "$ESTEIRA_REPO" ]] || die "informe o repo:  --repo <url>  ou  ESTEIRA_REPO=<url>"
+  [[ -n "$ESTEIRA_REPO" ]] || die "informe o repo:  --repo https://github.com/Nero-o/esteira.git"
   git clone --quiet "$ESTEIRA_REPO" "$ESTEIRA_HOME" || die "falha ao clonar $ESTEIRA_REPO"
   ok "clonado em $ESTEIRA_HOME"
 fi

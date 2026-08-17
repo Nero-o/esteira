@@ -12,14 +12,14 @@ Este repo e a config inteira. Uma maquina nova entra na esteira com um comando.
 ## Maquina nova
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<voce>/esteira/main/install.sh \
-  | bash -s -- --repo https://github.com/<voce>/esteira
+curl -fsSL https://raw.githubusercontent.com/Nero-o/esteira/main/install.sh \
+  | bash -s -- --repo https://github.com/Nero-o/esteira
 ```
 
 Ou, se preferir clonar primeiro:
 
 ```bash
-git clone https://github.com/<voce>/esteira ~/.esteira && bash ~/.esteira/install.sh
+git clone https://github.com/Nero-o/esteira ~/.esteira && bash ~/.esteira/install.sh
 ```
 
 O script instala o `opencode` (e o `claude` e o `codex`, se faltarem), aponta

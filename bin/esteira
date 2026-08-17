@@ -42,7 +42,11 @@ cmd_save() {
     return
   fi
   git -C "$ESTEIRA_HOME" commit -m "$msg"
-  git -C "$ESTEIRA_HOME" push && ok "enviado — rode 'esteira sync' nas outras maquinas"
+  if git -C "$ESTEIRA_HOME" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    git -C "$ESTEIRA_HOME" push
+  else
+    git -C "$ESTEIRA_HOME" push -u origin HEAD
+  fi && ok "enviado — rode 'esteira sync' nas outras maquinas"
 }
 
 cmd_status() {
