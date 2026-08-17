@@ -1,7 +1,13 @@
 // Decisao dos guardrails, separada do plugin para ser testavel sem subir o
 // OpenCode. O plugin so traduz o retorno em `throw`.
 
-import { caminhoSensivel, segredoEmTexto, bashPerigoso, bashExfiltra } from "./padroes.mjs"
+import {
+  caminhoSensivel,
+  segredoEmTexto,
+  bashPerigoso,
+  bashExfiltra,
+  bashTocaSegredo,
+} from "./padroes.mjs"
 
 // Ferramentas cujo argumento deixa o processo do opencode.
 export const SAI_DO_PROCESSO = new Set(["claude", "codex", "webfetch"])
@@ -54,6 +60,17 @@ export function verificarChamada(tool, args = {}) {
       return (
         `[guardrail] bloqueado: ${exfil}.\n` +
         `O comando fala com a rede e cita um arquivo de segredo.\n${ESCAPE}`
+      )
+    }
+
+    // Sem isto, `cat .env` contorna a Camada A inteira: la a checagem olha
+    // argumento de caminho, e o argumento do bash e uma string de comando.
+    const toca = bashTocaSegredo(cmd)
+    if (toca) {
+      return (
+        `[guardrail] bloqueado: ${toca} citado em comando de shell.\n` +
+        `Ler segredo por bash contorna a protecao de caminho. Use o arquivo de ` +
+        `exemplo, ou referencie o NOME da variavel.\n${ESCAPE}`
       )
     }
 

@@ -120,10 +120,26 @@ export function bashExfiltra(comando) {
   if (typeof comando !== "string" || !comando) return null
   const rede = /\b(curl|wget|nc|ncat|scp|rsync|ftp)\b/.test(comando)
   if (!rede) return null
-  for (const bruto of comando.split(/[\s'"=,]+/)) {
-    // `-d @.env`, `<.env`, `(cat .env)` — o caminho vem colado em pontuacao.
-    const token = bruto.replace(/^[@<>(){}[\]|&;$]+/, "").replace(/[)>;,|&]+$/, "")
-    if (caminhoSensivel(token)) return "arquivo de segredo indo para a rede"
+  return bashTocaSegredo(comando) ? "arquivo de segredo indo para a rede" : null
+}
+
+/**
+ * Todo caminho sensivel citado num comando de shell.
+ *
+ * Existe porque a checagem de caminho olha argumentos como `filePath`, e o
+ * argumento do bash e uma string de comando: `cat .env` passava direto por ela
+ * e abria uma porta lateral para a protecao principal.
+ *
+ * @param {string} comando
+ * @returns {string | null}
+ */
+export function bashTocaSegredo(comando) {
+  if (typeof comando !== "string" || !comando) return null
+  for (const bruto of comando.split(/[\s'"=,;|&<>()]+/)) {
+    // `-d @.env`, `<.env`, `$(cat .env)` — o caminho vem colado em pontuacao.
+    const token = bruto.replace(/^[@$<>(){}[\]]+/, "").replace(/[)>;,|&]+$/, "")
+    const achado = caminhoSensivel(token)
+    if (achado) return achado
   }
   return null
 }

@@ -1,7 +1,7 @@
 ---
 description: Revisa o diff procurando bug real. Roda em modelo diferente de quem escreveu o codigo. Somente leitura.
 mode: subagent
-model: openai/gpt-5.3-codex
+model: openai/gpt-5.6-sol
 temperature: 0.1
 color: warning
 tools:
