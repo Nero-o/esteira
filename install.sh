@@ -45,9 +45,13 @@ has() { command -v "$1" >/dev/null 2>&1; }
 step "1/6  repositorio"
 
 if [[ -d "$ESTEIRA_HOME/.git" ]]; then
-  git -C "$ESTEIRA_HOME" pull --ff-only --quiet 2>/dev/null \
-    && ok "atualizado  $ESTEIRA_HOME" \
-    || warn "sem pull (offline ou mudancas locais) — seguindo com o que tem em disco"
+  if [[ -z "$(git -C "$ESTEIRA_HOME" remote 2>/dev/null)" ]]; then
+    warn "repo local sem remote — 'git -C $ESTEIRA_HOME remote add origin <url>' para sincronizar entre maquinas"
+  elif git -C "$ESTEIRA_HOME" pull --ff-only --quiet 2>/dev/null; then
+    ok "atualizado  $ESTEIRA_HOME"
+  else
+    warn "pull falhou (offline ou mudancas locais) — seguindo com o que tem em disco"
+  fi
 elif [[ -d "$ESTEIRA_HOME" && -f "$ESTEIRA_HOME/opencode/opencode.jsonc" ]]; then
   ok "usando copia local em $ESTEIRA_HOME (ainda sem remote)"
 else

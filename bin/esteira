@@ -129,7 +129,11 @@ cmd_doctor() {
   has codex  || warn "codex ausente — /duelo roda so com metade"
 
   echo
-  [[ "$falhas" == "0" ]] && ok "sem falhas bloqueantes" || bad "$falhas problema(s) — rode: bash $ESTEIRA_HOME/install.sh"
+  if [[ "$falhas" == "0" ]]; then
+    ok "sem falhas bloqueantes"
+  else
+    bad "$falhas problema(s) acima — cada linha diz o comando que resolve"
+  fi
 }
 
 case "${1:-status}" in
