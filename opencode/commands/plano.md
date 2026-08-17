@@ -1,5 +1,5 @@
 ---
-description: Esteira de planejamento — mapeia o codigo, planeja no Claude, critica no GPT, consolida em .plans/
+description: Esteira de planejamento — mapeia, planeja no Claude (CLI), critica no GPT, consolida em .plans/
 agent: arquiteto
 ---
 
@@ -22,10 +22,13 @@ Arquivos sujos:
 Rode a esteira completa:
 
 1. `@mapeador` — mapeie o que importa para este objetivo.
-2. Rascunhe o plano no formato padrao.
-3. `@cetico` — passe o rascunho INTEIRO e exija veredito. Corrija o que for
-   bloqueador legitimo. No maximo 2 rodadas.
-4. Grave em `.plans/<slug>.md` e me mostre: veredito final, o que mudou depois
-   da critica, e qual e o primeiro passo a executar.
+2. Ferramenta `claude` — mande UMA chamada com o objetivo, os caminhos que o
+   mapeador achou e o formato de plano padrao. Ele le os arquivos sozinho.
+3. Critique o plano dele voce mesmo, abrindo os arquivos citados. Voce e GPT,
+   ele e Claude: e essa diferenca que da valor a esta etapa.
+4. So se sobrar divergencia grave que voce nao resolve lendo o codigo, chame a
+   ferramenta `codex` para desempatar.
+5. Grave em `.plans/<slug>.md` e me mostre: o que o Claude propos, o que voce
+   derrubou e por que, e qual e o primeiro passo a executar.
 
 Nao escreva codigo de producao nesta sessao.

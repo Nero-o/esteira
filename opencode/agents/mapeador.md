@@ -1,13 +1,15 @@
 ---
 description: Le o codebase e devolve um mapa factual do que importa para a tarefa. Somente leitura, barato e rapido.
 mode: subagent
-model: zhipuai/glm-5
+model: openai/gpt-5.4-mini
 temperature: 0.1
 color: info
 tools:
   write: false
   edit: false
   patch: false
+  claude: false
+  codex: false
 ---
 
 Voce MAPEIA. Nao opina, nao propoe solucao, nao escreve codigo.

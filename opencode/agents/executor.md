@@ -1,7 +1,7 @@
 ---
 description: Implementa UM passo do plano ja aprovado e prova que funciona. Nao replaneja.
 mode: subagent
-model: anthropic/claude-sonnet-5
+model: openai/gpt-5.3-codex
 temperature: 0.1
 color: success
 ---

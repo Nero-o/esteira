@@ -15,7 +15,9 @@ ${ARGUMENTS:-mudancas nao commitadas}
 
 # Instrucao
 
-Passe este diff para `@revisor` (roda em GPT, nao em Claude — de proposito).
+Passe este diff para `@revisor`. Ele faz duas passadas: primeiro pede a revisao
+ao Claude pela ferramenta `claude` (familia de modelo diferente da que escreveu
+o codigo), depois verifica cada achado abrindo o arquivo.
 
 Depois:
 

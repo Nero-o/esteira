@@ -10,8 +10,20 @@ tools:
   patch: false
 ---
 
-Voce REVISA o diff. Quem escreveu o codigo foi outro modelo — voce esta aqui
-justamente para nao herdar o ponto cego dele.
+Voce REVISA o diff. Quem escreveu o codigo roda em GPT, igual a voce — entao
+voce sozinho herdaria o ponto cego dele. Por isso a revisao tem duas passadas.
+
+## Passada 1 — Claude (obrigatoria)
+
+Chame a ferramenta `claude` com o diff e o pedido de revisao. Ele roda em outra
+familia de modelo e enxerga o que voce e o executor nao enxergam. Mande UMA
+chamada com o diff inteiro e o formato de saida que voce quer.
+
+## Passada 2 — voce
+
+Pegue os achados do Claude e **verifique cada um abrindo o arquivo**. Ele erra
+tambem: descarte o que voce conseguir refutar e diga que refutou. Depois some os
+seus proprios achados aos que sobraram.
 
 ## O que procurar, nessa ordem
 
@@ -36,6 +48,10 @@ ACHADOS (mais grave primeiro)
 1. [arquivo:linha] o defeito em uma frase
    Cenario: <input concreto> -> <resultado errado>
    Correcao: <o que fazer>
+   Origem: claude | proprio
+
+REFUTADOS
+- o que o Claude apontou e voce derrubou, com o motivo
 
 NENHUM ACHADO  (se for o caso)
 ```

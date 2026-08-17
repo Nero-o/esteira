@@ -165,17 +165,20 @@ logados=""
 [[ -f "$AUTH" ]] && logados="$(grep -oE '"[a-z0-9_-]+"[[:space:]]*:[[:space:]]*\{' "$AUTH" | tr -d '":{ ' | tr '\n' ' ')"
 
 falta=0
-for p in anthropic openai; do
-  if [[ " $logados " == *" $p "* ]]; then
-    ok "$p logado"
-  else
-    warn "opencode providers login -p $p"
-    falta=1
-  fi
-done
-for p in zhipuai moonshotai; do
-  [[ " $logados " == *" $p "* ]] && ok "$p logado" \
-    || info "opcional (GLM/Kimi):  opencode providers login -p $p"
+
+# O maestro do opencode. O Claude NAO entra aqui como provider: a assinatura
+# Pro/Max so vale no Claude Code, entao ele entra pela ferramenta 'claude'.
+if [[ " $logados " == *" openai "* ]]; then
+  ok "openai logado (maestro)"
+else
+  warn "opencode providers login -p openai"
+  info "sem assinatura ChatGPT? aponte os agentes para opencode/glm-5-free (Zen)"
+  falta=1
+fi
+
+# Os CLIs carregam o peso do raciocinio — cada um com o proprio login.
+for c in claude codex; do
+  has "$c" && info "rode '$c' uma vez para logar, se ainda nao fez" || true
 done
 
 echo

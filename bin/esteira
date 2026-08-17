@@ -108,14 +108,15 @@ cmd_doctor() {
   fi
 
   local auth="$HOME/.local/share/opencode/auth.json"
-  if [[ ! -f "$auth" ]]; then
-    bad "nenhum provedor logado — opencode providers login -p anthropic"
+  if [[ ! -f "$auth" ]] || ! grep -q '"openai"' "$auth" 2>/dev/null; then
+    bad "maestro sem provedor — opencode providers login -p openai"
+    info "sem assinatura ChatGPT? aponte os agentes para opencode/glm-5-free (Zen)"
     falhas=$((falhas+1))
   else
-    for p in anthropic openai; do
-      grep -q "\"$p\"" "$auth" || { warn "provedor '$p' sem login — opencode providers login -p $p"; }
-    done
+    ok "openai logado (maestro)"
   fi
+  grep -q '"anthropic"' "$auth" 2>/dev/null \
+    && warn "provider anthropic logado no opencode — o Claude deve entrar pela ferramenta 'claude', nao como provider"
 
   # modelos referenciados pelos agentes existem no catalogo do login atual?
   if has opencode; then
@@ -129,8 +130,21 @@ cmd_doctor() {
     fi
   fi
 
-  has claude || warn "claude ausente — /duelo roda so com metade"
-  has codex  || warn "codex ausente — /duelo roda so com metade"
+  # guarda de politica: a assinatura Claude nao cobre uso fora do Claude Code.
+  # Claude entra nesta esteira pela ferramenta 'claude', que chama o CLI oficial.
+  if grep -lE '^model:[[:space:]]*anthropic/' "$ESTEIRA_HOME"/opencode/agents/*.md >/dev/null 2>&1; then
+    bad "agente(s) apontando para anthropic/* — a assinatura Claude nao cobre isso"
+    grep -lE '^model:[[:space:]]*anthropic/' "$ESTEIRA_HOME"/opencode/agents/*.md \
+      | sed 's|.*/|       |'
+    echo "       use a ferramenta 'claude' (CLI oficial) ou uma API key da Anthropic"
+    falhas=$((falhas+1))
+  fi
+
+  for t in claude codex; do
+    [[ -f "$ESTEIRA_HOME/opencode/tools/$t.ts" ]] \
+      || { bad "ferramenta '$t' ausente em opencode/tools/"; falhas=$((falhas+1)); }
+    has "$t" || warn "$t CLI ausente do PATH — a ferramenta '$t' vai falhar"
+  done
 
   echo
   if [[ "$falhas" == "0" ]]; then

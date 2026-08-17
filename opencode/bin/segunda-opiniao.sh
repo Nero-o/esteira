@@ -37,7 +37,7 @@ if command -v codex >/dev/null 2>&1; then
       --skip-git-repo-check \
       --ephemeral \
       --color never \
-      -o "$OUT/codex.md" \
+      -o "$OUT/codex.md" </dev/null \
       "$MOLDURA" >"$OUT/codex.log" 2>&1
     echo $? > "$OUT/codex.rc"
   ) &
@@ -52,7 +52,7 @@ if command -v claude >/dev/null 2>&1; then
   (
     cd "$DIR" || exit 1
     timeout "$TIMEOUT" claude -p "$MOLDURA" \
-      --permission-mode plan >"$OUT/claude.md" 2>"$OUT/claude.log"
+      --permission-mode plan </dev/null >"$OUT/claude.md" 2>"$OUT/claude.log"
     echo $? > "$OUT/claude.rc"
   ) &
   PID_CLAUDE=$!
