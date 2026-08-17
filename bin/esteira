@@ -2,11 +2,12 @@
 #
 # esteira — controle da esteira multi-IA
 #
-#   esteira sync     puxa do git e reinstala (use ao chegar numa maquina)
-#   esteira save     commita e envia suas mudancas de config
-#   esteira status   o que esta instalado, logado e carregado aqui
-#   esteira edit     abre a pasta de config no seu editor
-#   esteira doctor   diagnostica o que esta quebrado
+#   esteira sync            puxa do git e reinstala (use ao chegar numa maquina)
+#   esteira save "msg"      commita e envia suas mudancas de config
+#   esteira status          o que esta instalado, logado e carregado aqui
+#   esteira doctor          diagnostica o que esta quebrado
+#   esteira integrar [dir]  prepara um projeto para a esteira
+#   esteira edit            abre a pasta de config no seu editor
 
 set -euo pipefail
 
@@ -146,6 +147,46 @@ cmd_doctor() {
     has "$t" || warn "$t CLI ausente do PATH — a ferramenta '$t' vai falhar"
   done
 
+  # ---------------------------------------------------------------- guardrails
+  if [[ "${ESTEIRA_GUARDRAILS:-}" == "off" ]]; then
+    warn "ESTEIRA_GUARDRAILS=off — os guardrails estao DESLIGADOS neste shell"
+  fi
+
+  [[ -f "$ESTEIRA_HOME/opencode/plugins/guardrails.ts" ]] \
+    || { bad "plugin de guardrails ausente"; falhas=$((falhas+1)); }
+
+  # Teste de fumaca: os padroes ainda bloqueiam o que devem e liberam o resto?
+  if has node && [[ -f "$ESTEIRA_HOME/opencode/plugins/lib/padroes.test.mjs" ]]; then
+    if node "$ESTEIRA_HOME/opencode/plugins/lib/padroes.test.mjs" >/dev/null 2>&1; then
+      ok "guardrails: matriz de casos passou"
+    else
+      bad "guardrails: matriz de casos FALHOU — rode: node $ESTEIRA_HOME/opencode/plugins/lib/padroes.test.mjs"
+      falhas=$((falhas+1))
+    fi
+  fi
+
+  # A config resolvida ainda tem a policy e os guardrails de prompt?
+  if has opencode && has node; then
+    local resolvida; resolvida="$(opencode debug config 2>/dev/null || true)"
+    if [[ -n "$resolvida" ]]; then
+      # here-string em vez de pipe: pipe roda em subshell e perderia $falhas
+      local saida; saida="$(node -e '
+        const c = JSON.parse(process.argv[1] || "{}")
+        const pol = (c.experimental?.policies || []).some(
+          p => p.action === "provider.use" && p.effect === "deny" && p.resource === "anthropic")
+        const gr = (c.instructions || []).some(i => i.endsWith("guardrails.md"))
+        console.log((pol ? "ok" : "falta") + " " + (gr ? "ok" : "falta"))
+      ' "$resolvida" 2>/dev/null || echo "falta falta")"
+      local pol gr; read -r pol gr <<<"$saida"
+
+      if [[ "$pol" == "ok" ]]; then ok "policy nega provider anthropic"
+      else bad "policy de provider anthropic ausente na config"; falhas=$((falhas+1)); fi
+
+      if [[ "$gr" == "ok" ]]; then ok "guardrails.md carregado em instructions"
+      else bad "guardrails.md fora de instructions"; falhas=$((falhas+1)); fi
+    fi
+  fi
+
   echo
   if [[ "$falhas" == "0" ]]; then
     ok "sem falhas bloqueantes"
@@ -154,12 +195,22 @@ cmd_doctor() {
   fi
 }
 
+cmd_integrar() {
+  local alvo="${1:-$PWD}"
+  [[ -d "$alvo" ]] || { bad "diretorio nao existe: $alvo"; exit 1; }
+  has opencode || { bad "opencode ausente — rode: bash $ESTEIRA_HOME/install.sh"; exit 1; }
+  echo "${B}integrando${Z} $alvo"
+  info "gera AGENTS.md e .esteira/ com dados verificados; nao commita"
+  ( cd "$alvo" && opencode run --command integrar )
+}
+
 case "${1:-status}" in
-  sync)   shift; cmd_sync "$@" ;;
-  save)   shift; cmd_save "$@" ;;
-  status) cmd_status ;;
-  edit)   cmd_edit ;;
-  doctor) cmd_doctor ;;
+  sync)     shift; cmd_sync "$@" ;;
+  save)     shift; cmd_save "$@" ;;
+  status)   cmd_status ;;
+  edit)     cmd_edit ;;
+  doctor)   cmd_doctor ;;
+  integrar) shift; cmd_integrar "$@" ;;
   -h|--help|help) sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "comando desconhecido: $1"; sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

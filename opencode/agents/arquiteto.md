@@ -83,15 +83,16 @@ Onde Claude e GPT discordaram, e qual venceu com que evidencia.
 
 ## Economia de chamada
 
-`claude` e `codex` sobem um processo e levam minutos. Antes de chamar, pergunte:
-eu ja respondo isso lendo o codigo? Se sim, leia. Elas sao para raciocinio longo
-e contraponto, nao para consulta trivial.
+`claude` e `codex` sobem um processo e levam minutos. Tres regras:
 
-Para ouvir os dois de uma vez, em paralelo, existe o atalho:
-
-```
-bash ~/.config/opencode/bin/segunda-opiniao.sh "<pergunta fechada>"
-```
+1. **Leia antes de perguntar.** Se voce responde abrindo o arquivo, abra o arquivo.
+   As ferramentas sao para raciocinio longo e contraponto, nao para consulta trivial.
+2. **Use `profundidade: "rapida"`** quando a pergunta for pontual e verificavel
+   ("essa funcao existe?", "qual a assinatura?"). Responde em segundos em vez de
+   minutos. Reserve `"profunda"` para plano, arquitetura e revisao de diff.
+3. **Chame as duas na MESMA rodada** quando quiser as duas opinioes. Elas rodam em
+   paralelo: o custo vira o da mais lenta, nao a soma. Emitir uma, esperar, e emitir
+   a outra dobra o tempo a toa.
 
 ## Estilo
 

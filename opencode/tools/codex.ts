@@ -6,21 +6,25 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 const run = promisify(execFile)
-const TIMEOUT_MS = 420_000
+
+// ESTEIRA_TOOL_TIMEOUT em segundos.
+const TIMEOUT_MS = Math.max(30, Number(process.env.ESTEIRA_TOOL_TIMEOUT) || 420) * 1000
 
 export default tool({
   description: [
     "Consulta o Codex CLI (assinatura ChatGPT, cliente oficial) em sandbox somente-leitura.",
     "",
-    "Use para criticar um plano, revisar um diff, ou confirmar um detalhe tecnico com um",
-    "modelo de familia diferente da sua. E o contraponto do Claude: quando os dois",
-    "divergem, ali esta a decisao que importa.",
+    "Use para desempatar uma divergencia, confirmar um detalhe tecnico, ou quando quiser",
+    "o sandbox e as skills proprias do Codex — que sao diferentes das suas.",
     "",
-    "O Codex entra com as proprias skills, regras e AGENTS.md do projeto, e le arquivos",
-    "por conta propria — aponte caminhos, nao cole codigo.",
+    "O Codex entra com as proprias regras e AGENTS.md do projeto, e le arquivos por conta",
+    "propria — aponte caminhos, nao cole codigo no prompt.",
     "",
-    "Ele nao altera nenhum arquivo. Cada chamada leva de 30s a alguns minutos: mande UMA",
-    "pergunta grande e autocontida em vez de varias pequenas.",
+    "Nao altera arquivo nenhum. Sobe um processo e leva de 30s a alguns minutos: mande",
+    "UMA pergunta grande e autocontida em vez de varias pequenas.",
+    "",
+    "Quer as duas opinioes? Chame `claude` e `codex` NA MESMA RODADA — elas rodam em",
+    "paralelo e o custo vira o da mais lenta, nao a soma das duas.",
   ].join("\n"),
 
   args: {
@@ -30,33 +34,46 @@ export default tool({
         "Pergunta ou tarefa completa e autocontida. Inclua o objetivo, os caminhos de arquivo " +
           "relevantes e o formato de resposta que voce espera. O Codex nao ve esta conversa.",
       ),
+    profundidade: tool.schema
+      .enum(["rapida", "profunda"])
+      .optional()
+      .describe(
+        "rapida = raciocinio baixo, responde em segundos. Use para consulta pontual e " +
+          "verificavel. profunda = raciocinio alto, leva minutos. Use para critica de plano " +
+          "e revisao de diff. Default: profunda.",
+      ),
   },
 
   async execute(args, context) {
     const cwd = context.worktree ?? context.directory ?? process.cwd()
     const out = join(tmpdir(), `esteira-codex-${context.sessionID ?? "x"}-${process.pid}.md`)
 
+    const argv = [
+      "exec",
+      "--sandbox", "read-only",
+      "--skip-git-repo-check",
+      "--ephemeral",
+      "--color", "never",
+    ]
+    // Mexe no esforco de raciocinio, nao no modelo: nao depende de qual modelo
+    // a conta tem liberado.
+    if (args.profundidade === "rapida") argv.push("-c", 'model_reasoning_effort="low"')
+    argv.push("-o", out, args.prompt)
+
     try {
-      const proc = run(
-        "codex",
-        [
-          "exec",
-          "--sandbox", "read-only",
-          "--skip-git-repo-check",
-          "--ephemeral",
-          "--color", "never",
-          "-o", out,
-          args.prompt,
-        ],
-        { cwd, timeout: TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 },
-      )
+      const proc = run("codex", argv, {
+        cwd,
+        timeout: TIMEOUT_MS,
+        maxBuffer: 32 * 1024 * 1024,
+      })
       // `codex exec` anexa o stdin ao prompt: sem fechar, ele espera para sempre.
       proc.child.stdin?.end()
       await proc
       const texto = (await readFile(out, "utf8")).trim()
       return texto || "(codex nao retornou texto)"
     } catch (err: any) {
-      if (err?.killed) return `(codex estourou o timeout de ${TIMEOUT_MS / 1000}s — reduza o escopo da pergunta)`
+      if (err?.killed)
+        return `(codex estourou o timeout de ${TIMEOUT_MS / 1000}s — reduza o escopo, use profundidade "rapida", ou suba ESTEIRA_TOOL_TIMEOUT)`
       if (err?.code === "ENOENT") return "(codex CLI nao encontrado no PATH — rode: esteira doctor)"
       return `(codex falhou: ${String(err?.stderr || err?.message || err).trim().slice(0, 500)})`
     } finally {

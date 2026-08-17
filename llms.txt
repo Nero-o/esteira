@@ -1,0 +1,38 @@
+# esteira
+
+> Esteira multi-IA de desenvolvimento com o OpenCode como maestro. Claude e Codex entram pelos CLIs oficiais como ferramentas chamáveis, a revisão é sempre cruzada entre famílias de modelo diferentes, e guardrails impostos por plugin bloqueiam vazamento de segredo e comando destrutivo. Roda sobre assinaturas existentes (ChatGPT e Claude), sem API por token.
+
+Se você é uma IA e recebeu este arquivo, o pedido provavelmente é **integrar um projeto na esteira**. Vá direto para `INTEGRACAO.md` — ele é um procedimento executável, com critério de pronto por passo. Os demais links existem para você entender o que está integrando.
+
+Princípio que governa tudo: **quem revisa nunca é o modelo que escreveu**. Um modelo revisando o próprio trabalho erra e valida o erro pelo mesmo motivo. Cada etapa crítica roda em uma família de modelo diferente da anterior, e o valor está na divergência, não na concordância.
+
+Ao integrar um projeto, você produz três arquivos no repositório dele: `AGENTS.md` (lido nativamente por OpenCode e Codex), `.esteira/projeto.md` (stack, comandos reais, zonas sensíveis) e `.esteira/guardrails.md` (regras do domínio). Preencha com o que você **verificou** no repositório — nunca com o que é típico de projetos parecidos.
+
+## Comece aqui
+
+- [INTEGRACAO.md](https://raw.githubusercontent.com/Nero-o/esteira/main/INTEGRACAO.md): procedimento passo a passo para integrar um projeto. É o documento principal.
+- [templates/AGENTS.md](https://raw.githubusercontent.com/Nero-o/esteira/main/templates/AGENTS.md): modelo do arquivo raiz, com marcadores `<PREENCHER: ...>`
+- [templates/projeto.md](https://raw.githubusercontent.com/Nero-o/esteira/main/templates/projeto.md): modelo de `.esteira/projeto.md`
+- [templates/guardrails.md](https://raw.githubusercontent.com/Nero-o/esteira/main/templates/guardrails.md): modelo de `.esteira/guardrails.md`
+
+## Como a esteira funciona
+
+- [README.md](https://raw.githubusercontent.com/Nero-o/esteira/main/README.md): visão geral, instalação, comandos do dia a dia
+- [opencode/guardrails.md](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/guardrails.md): contrato de comportamento que todo agente carrega — anti-alucinação, anti-injeção, anti-vazamento, escopo
+- [opencode/agents/arquiteto.md](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/agents/arquiteto.md): o maestro; mostra a ordem real da esteira
+- [opencode/commands/plano.md](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/commands/plano.md): o comando `/plano`, do mapeamento ao arquivo em `.plans/`
+
+## Guardrails impostos
+
+- [opencode/plugins/guardrails.ts](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/plugins/guardrails.ts): intercepta toda chamada de ferramenta antes de executar
+- [opencode/plugins/lib/padroes.mjs](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/plugins/lib/padroes.mjs): os padrões de segredo, caminho sensível e shell perigoso
+- [opencode/plugins/lib/verificar.mjs](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/plugins/lib/verificar.mjs): a decisão de bloquear, em JS puro e testável
+- [opencode/opencode.jsonc](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/opencode.jsonc): permissões, policy de provider, limites de contexto
+
+## Optional
+
+- [install.sh](https://raw.githubusercontent.com/Nero-o/esteira/main/install.sh): bootstrap idempotente de máquina nova
+- [bin/esteira](https://raw.githubusercontent.com/Nero-o/esteira/main/bin/esteira): `sync` / `save` / `status` / `doctor` / `integrar`
+- [opencode/tools/claude.ts](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/tools/claude.ts): a ferramenta que chama o Claude Code CLI
+- [opencode/tools/codex.ts](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/tools/codex.ts): a ferramenta que chama o Codex CLI
+- [opencode/plugins/lib/padroes.test.mjs](https://raw.githubusercontent.com/Nero-o/esteira/main/opencode/plugins/lib/padroes.test.mjs): a matriz de casos dos guardrails

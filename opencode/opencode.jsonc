@@ -4,11 +4,11 @@
   // ---------------------------------------------------------------
   // O OpenCode roda em modelos OpenAI (login ChatGPT Plus/Pro).
   //
-  // NAO aponte agente nenhum para "anthropic/*" com login de assinatura:
-  // a Anthropic permite OAuth de Pro/Max apenas no Claude Code e nos apps
-  // nativos dela, e bloqueia no servidor. Ver code.claude.com/docs/en/
-  // legal-and-compliance. O Claude entra nesta esteira pela ferramenta
-  // `claude`, que chama o CLI oficial — coberto pela assinatura e permitido.
+  // O provider "anthropic" esta NEGADO por policy mais abaixo: a Anthropic
+  // permite OAuth de Pro/Max apenas no Claude Code e nos apps nativos dela.
+  // Ver code.claude.com/docs/en/legal-and-compliance. O Claude entra nesta
+  // esteira pela ferramenta `claude`, que chama o CLI oficial — coberto pela
+  // assinatura e dentro da politica.
   //
   // Sem login OpenAI? Troque para um modelo free do Zen (ex.: opencode/glm-5-free)
   // e a esteira segue funcionando: o peso esta nas ferramentas, nao no maestro.
@@ -18,26 +18,72 @@
   "small_model": "openai/gpt-5.4-mini",
   "default_agent": "arquiteto",
 
-  // Reaproveita o contexto que voce ja escreveu para o Claude Code.
-  "instructions": ["AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"],
+  // Guardrails globais primeiro, depois o contexto do projeto.
+  // {env:HOME} resolve para caminho absoluto em qualquer maquina.
+  "instructions": [
+    "{env:HOME}/.config/opencode/guardrails.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".claude/CLAUDE.md",
+    ".esteira/projeto.md",
+    ".esteira/guardrails.md"
+  ],
 
   // Reaproveita as skills que voce ja tem no Claude Code / Codex.
   "skills": {
     "paths": ["~/.claude/skills", "~/.codex/skills"]
   },
 
+  // Impede que a assinatura Claude vire provider, mesmo que alguem logue por
+  // engano. Config global vence a do projeto: nenhum repo consegue reabrir.
+  "experimental": {
+    "policies": [
+      { "effect": "deny", "action": "provider.use", "resource": "anthropic" }
+    ]
+  },
+
+  // Defesa em profundidade. O bloqueio preciso — o que sabe liberar
+  // .env.example — mora no plugin de guardrails; aqui ficam so os casos que
+  // nao tem variante legitima de exemplo.
   "permission": {
-    "webfetch": "allow",
+    "webfetch": "ask",
     "task": "allow",
+    "edit": "allow",
+    "read": {
+      "*": "allow",
+      "**/*.pem": "deny",
+      "**/*.p12": "deny",
+      "**/*.pfx": "deny",
+      "**/id_rsa": "deny",
+      "**/id_ed25519": "deny",
+      "**/.ssh/**": "deny",
+      "**/.aws/credentials": "deny"
+    },
     "bash": {
       "*": "allow",
       "rm *": "ask",
       "git push*": "ask",
       "git reset --hard*": "ask",
       "npm publish*": "ask",
-      "railway *": "ask"
-    },
-    "edit": "allow"
+      "railway *": "ask",
+      "chmod 777*": "deny",
+      "curl * | *": "deny",
+      "wget * | *": "deny"
+    }
+  },
+
+  // Saida de ferramenta acima disso vai para disco e volta como preview —
+  // evita que um `git diff` gigante coma o contexto do maestro.
+  "tool_output": {
+    "max_lines": 1000,
+    "max_bytes": 40960
+  },
+
+  // Poda saida de ferramenta antiga ao compactar. Sessao longa de esteira
+  // acumula resposta de CLI que ja virou decisao registrada no plano.
+  "compaction": {
+    "auto": true,
+    "prune": true
   },
 
   "mcp": {

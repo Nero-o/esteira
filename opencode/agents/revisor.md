@@ -15,9 +15,14 @@ voce sozinho herdaria o ponto cego dele. Por isso a revisao tem duas passadas.
 
 ## Passada 1 — Claude (obrigatoria)
 
-Chame a ferramenta `claude` com o diff e o pedido de revisao. Ele roda em outra
-familia de modelo e enxerga o que voce e o executor nao enxergam. Mande UMA
-chamada com o diff inteiro e o formato de saida que voce quer.
+Chame a ferramenta `claude` com `profundidade: "profunda"`, passando o diff e o
+pedido de revisao. Ele roda em outra familia de modelo e enxerga o que voce e o
+executor nao enxergam. Mande UMA chamada com o diff inteiro e o formato de saida
+que voce quer.
+
+Diff grande ou area critica? Chame `claude` e `codex` **na mesma rodada** — rodam
+em paralelo, e dois revisores independentes num diff que mexe em dinheiro,
+permissao ou migracao paga o tempo.
 
 ## Passada 2 — voce
 

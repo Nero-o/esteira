@@ -11,7 +11,7 @@ set -uo pipefail
 
 PERGUNTA="${1:-}"
 DIR="${2:-$PWD}"
-TIMEOUT="${3:-420}"
+TIMEOUT="${3:-${ESTEIRA_TOOL_TIMEOUT:-420}}"
 
 if [[ -z "$PERGUNTA" ]]; then
   echo "uso: segunda-opiniao.sh \"pergunta\" [diretorio] [timeout_segundos]" >&2
