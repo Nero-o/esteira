@@ -44,7 +44,10 @@ export default tool({
   },
 
   async execute(args, context) {
-    const cwd = context.worktree ?? context.directory ?? process.cwd()
+    // `directory` e o diretorio da sessao; `worktree` vem como "/" quando o
+    // projeto nao e um repo git, e "/" faria os CLIs varrerem a raiz do sistema.
+    const alvo = context.directory ?? context.worktree ?? process.cwd()
+    const cwd = alvo && alvo !== "/" ? alvo : process.cwd()
     const argv = ["-p", args.prompt, "--permission-mode", "plan"]
     if (args.profundidade === "rapida") argv.push("--model", "haiku")
 

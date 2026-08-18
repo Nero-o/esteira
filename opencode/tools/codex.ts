@@ -45,7 +45,10 @@ export default tool({
   },
 
   async execute(args, context) {
-    const cwd = context.worktree ?? context.directory ?? process.cwd()
+    // `directory` e o diretorio da sessao; `worktree` vem como "/" quando o
+    // projeto nao e um repo git, e "/" faria os CLIs varrerem a raiz do sistema.
+    const alvo = context.directory ?? context.worktree ?? process.cwd()
+    const cwd = alvo && alvo !== "/" ? alvo : process.cwd()
     const out = join(tmpdir(), `esteira-codex-${context.sessionID ?? "x"}-${process.pid}.md`)
 
     const argv = [
@@ -54,6 +57,10 @@ export default tool({
       "--skip-git-repo-check",
       "--ephemeral",
       "--color", "never",
+      // Fixa a raiz de trabalho. Sem isto o codex resolve o workspace por conta
+      // propria e pode nao enxergar os arquivos do projeto — ele responde
+      // "nao encontrei o arquivo" em vez de falhar, o que engana.
+      "-C", cwd,
     ]
     // Mexe no esforco de raciocinio, nao no modelo: nao depende de qual modelo
     // a conta tem liberado.
