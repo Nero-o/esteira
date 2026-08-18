@@ -120,26 +120,72 @@ export function bashExfiltra(comando) {
   if (typeof comando !== "string" || !comando) return null
   const rede = /\b(curl|wget|nc|ncat|scp|rsync|ftp)\b/.test(comando)
   if (!rede) return null
-  return bashTocaSegredo(comando) ? "arquivo de segredo indo para a rede" : null
+  return textoCitaSegredo(comando) ? "arquivo de segredo indo para a rede" : null
 }
 
 /**
- * Todo caminho sensivel citado num comando de shell.
+ * Todo caminho sensivel citado dentro de um texto livre — comando de shell ou
+ * corpo de patch.
  *
- * Existe porque a checagem de caminho olha argumentos como `filePath`, e o
- * argumento do bash e uma string de comando: `cat .env` passava direto por ela
- * e abria uma porta lateral para a protecao principal.
+ * Existe porque a checagem de caminho olha argumentos como `filePath`, e tanto
+ * o `bash` quanto o `apply_patch` entregam o caminho embutido numa string
+ * grande: `cat .env` e `*** Update File: .env` passavam direto por ela.
  *
- * @param {string} comando
+ * As aspas caem antes da separacao: `cat .en''v`, que o shell resolve como
+ * `.env`, escaparia se olhassemos o texto cru.
+ *
+ * @param {string} texto
  * @returns {string | null}
  */
-export function bashTocaSegredo(comando) {
-  if (typeof comando !== "string" || !comando) return null
-  for (const bruto of comando.split(/[\s'"=,;|&<>()]+/)) {
-    // `-d @.env`, `<.env`, `$(cat .env)` — o caminho vem colado em pontuacao.
-    const token = bruto.replace(/^[@$<>(){}[\]]+/, "").replace(/[)>;,|&]+$/, "")
+export function textoCitaSegredo(texto) {
+  if (typeof texto !== "string" || !texto) return null
+  const semAspas = texto.replace(/['"`\\]/g, "")
+  for (const bruto of semAspas.split(/[\s=,;|&<>()]+/)) {
+    const token = bruto.replace(/^[@$<>(){}[\]:+-]+/, "").replace(/[)>;,|&]+$/, "")
     const achado = caminhoSensivel(token)
     if (achado) return achado
   }
   return null
+}
+
+/** Nome antigo, mantido para nao quebrar quem ja importava. */
+export const bashTocaSegredo = textoCitaSegredo
+
+// ---------------------------------------------------------------- redacao ---
+
+/**
+ * Substitui todo segredo encontrado por um marcador, preservando o resto do
+ * texto.
+ *
+ * Usado na SAIDA das ferramentas. Nem sempre da para impedir que um CLI leia um
+ * segredo — `claude` e `codex` leem arquivos por conta propria, e o prompt que
+ * manda ler nao contem segredo nenhum para a varredura de entrada barrar. Mas
+ * da para impedir que o VALOR entre no contexto do agente.
+ *
+ * @param {string} texto
+ * @returns {{texto: string, achados: string[]}}
+ */
+export function redigirSegredos(texto) {
+  if (typeof texto !== "string" || !texto) return { texto, achados: [] }
+  let out = texto
+  const achados = []
+
+  for (const { nome, re } of PADROES_SEGREDO) {
+    const global = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g")
+    if (!global.test(out)) continue
+    global.lastIndex = 0
+    achados.push(nome)
+    out = out.replace(global, `[REDIGIDO:${nome}]`)
+  }
+
+  out = out.replace(
+    /\b([a-z][a-z0-9+.-]*:\/\/)([^\s:/@]+):([^\s:/@]{3,})@/gi,
+    (inteiro, proto, usuario, senha) => {
+      if (PLACEHOLDER.test(senha)) return inteiro
+      if (!achados.includes("connection string com senha")) achados.push("connection string com senha")
+      return `${proto}${usuario}:[REDIGIDO]@`
+    },
+  )
+
+  return { texto: out, achados }
 }

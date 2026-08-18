@@ -49,7 +49,10 @@ export default tool({
     // projeto nao e um repo git, e "/" faria os CLIs varrerem a raiz do sistema.
     const alvo = context.directory ?? context.worktree ?? process.cwd()
     const cwd = alvo && alvo !== "/" ? alvo : process.cwd()
-    const out = join(tmpdir(), `esteira-codex-${context.sessionID ?? "x"}-${process.pid}.md`)
+    // callID e unico por chamada. Com sessionID+pid, duas chamadas paralelas de
+    // codex na mesma sessao gravariam no MESMO arquivo e uma leria a resposta da
+    // outra — e o revisor pede exatamente chamadas paralelas.
+    const out = join(tmpdir(), `esteira-codex-${context.callID ?? context.sessionID ?? "x"}-${process.pid}.md`)
 
     const argv = [
       "exec",

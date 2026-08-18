@@ -10,7 +10,7 @@ import {
   bashExfiltra,
   bashTocaSegredo,
 } from "./padroes.mjs"
-import { verificarChamada } from "./verificar.mjs"
+import { verificarChamada, redigirSaida } from "./verificar.mjs"
 
 // ---------------------------------------------------------------- fixtures ---
 //
@@ -247,6 +247,31 @@ for (const [rot, tool, args] of [
   ["bash export local", "bash", { command: `export ANTHROPIC_API_KEY=${CHAVE_ANT}` }],
   ["bash curl comum", "bash", { command: "curl -s https://api.github.com/repos/Nero-o/esteira" }],
 ]) chk(`chamada passa: ${rot}`, verificarChamada(tool, args), false)
+
+// ------------------------------- furos fechados na caca de bugs ---
+for (const [rot, tool, args] of [
+  ["apply_patch escrevendo em .env", "apply_patch", { patch: "*** Update File: .env\n+X=1" }],
+  ["patch em chave ssh", "apply_patch", { patch: "*** Update File: ~/.ssh/id_rsa\n+x" }],
+  ["write com chave `file`", "write", { file: ".env", content: "x" }],
+  ["task carregando segredo", "task", { prompt: `chave ${FAKE.anthropic}` }],
+  ["bash com aspas quebradas", "bash", { command: "cat .en''v" }],
+  ["bash com subshell", "bash", { command: "cat $(echo .env)" }],
+]) chk(`furo fechado: ${rot}`, verificarChamada(tool, args), true)
+
+for (const [rot, tool, args] of [
+  ["apply_patch em codigo", "apply_patch", { patch: "*** Update File: src/app.ts\n+const x = 1" }],
+  ["write em codigo", "write", { file: "src/novo.ts", content: "x" }],
+  ["task normal", "task", { prompt: "mapeie o modulo de investimentos" }],
+  ["bash com aspas normais", "bash", { command: "echo 'ola mundo'" }],
+]) chk(`furo fechado, sem falso positivo: ${rot}`, verificarChamada(tool, args), false)
+
+// ------------------------------- Camada D: redacao de saida ---
+chk("saida com segredo e redigida", redigirSaida("codex", `k=${FAKE.anthropic}`), true)
+chk("saida com conn string real e redigida",
+    redigirSaida("bash", "postgres://admin:Tr0ub4dor3xK@db/app"), true)
+chk("saida limpa nao e tocada", redigirSaida("read", "const x = 1"), false)
+chk("placeholder de doc na saida nao e tocado",
+    redigirSaida("read", "postgres://user:password@localhost/dev"), false)
 
 console.log(
   falhas === 0

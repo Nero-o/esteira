@@ -6,14 +6,20 @@ import {
   segredoEmTexto,
   bashPerigoso,
   bashExfiltra,
-  bashTocaSegredo,
+  textoCitaSegredo,
+  redigirSegredos,
 } from "./padroes.mjs"
 
 // Ferramentas cujo argumento deixa o processo do opencode.
 export const SAI_DO_PROCESSO = new Set(["claude", "codex", "webfetch"])
 
+// `task` fica no processo, mas um segredo no prompt de um subagente so espera
+// a proxima ferramenta para vazar. Varre igual.
+const VARRE_SEGREDO = new Set([...SAI_DO_PROCESSO, "task"])
+
 // Chaves de argumento que carregam caminho de arquivo.
-const CHAVE_CAMINHO = /^(file_?path|path|filename|dir|directory|include|glob|pattern)$/i
+const CHAVE_CAMINHO =
+  /^(file|files|file_?path|file_?paths|path|paths|filename|dir|directory|include|glob|pattern|target|source|src|dest|destination)$/i
 
 const ESCAPE = "Falso positivo? Rode com ESTEIRA_GUARDRAILS=off opencode"
 
@@ -48,6 +54,21 @@ export function verificarChamada(tool, args = {}) {
     }
   }
 
+  // -- Camada A2: caminho embutido em texto grande ---------------------------
+  // `apply_patch` (a ferramenta de escrita dos modelos OpenAI) carrega o caminho
+  // dentro do corpo do patch, nao num argumento de caminho — passava batido.
+  if (tool === "apply_patch" || tool === "patch") {
+    for (const t of valores(args)) {
+      const achado = textoCitaSegredo(t)
+      if (achado) {
+        return (
+          `[guardrail] bloqueado: patch mexendo em ${achado}.\n` +
+          `Agente nao escreve em arquivo de segredo.\n${ESCAPE}`
+        )
+      }
+    }
+  }
+
   // -- Camada C: shell destrutivo ou exfiltrante -----------------------------
   if (tool === "bash") {
     const cmd = String(args.command ?? "")
@@ -65,7 +86,7 @@ export function verificarChamada(tool, args = {}) {
 
     // Sem isto, `cat .env` contorna a Camada A inteira: la a checagem olha
     // argumento de caminho, e o argumento do bash e uma string de comando.
-    const toca = bashTocaSegredo(cmd)
+    const toca = textoCitaSegredo(cmd)
     if (toca) {
       return (
         `[guardrail] bloqueado: ${toca} citado em comando de shell.\n` +
@@ -90,7 +111,7 @@ export function verificarChamada(tool, args = {}) {
   // -- Camada B: segredo saindo do processo ----------------------------------
   // A razao de existir do resto: `claude` e `codex` sobem outro processo e
   // `webfetch` fala com a internet. O que passa aqui saiu do seu controle.
-  if (SAI_DO_PROCESSO.has(tool)) {
+  if (VARRE_SEGREDO.has(tool)) {
     for (const t of valores(args)) {
       const seg = segredoEmTexto(t)
       if (seg) {
@@ -104,4 +125,28 @@ export function verificarChamada(tool, args = {}) {
   }
 
   return null
+}
+
+/**
+ * Camada D — varredura da SAIDA.
+ *
+ * As camadas anteriores olham o que entra. Esta olha o que volta: um CLI pode
+ * ser mandado ler um segredo com um prompt perfeitamente limpo, e o valor
+ * voltaria direto para o contexto do agente.
+ *
+ * Redige em vez de bloquear: a resposta costuma ser util, o valor e que nao pode
+ * entrar.
+ *
+ * @param {string} tool
+ * @param {string} saida
+ * @returns {string | null} saida redigida, ou null se nada mudou
+ */
+export function redigirSaida(tool, saida) {
+  const { texto, achados } = redigirSegredos(saida)
+  if (!achados.length) return null
+  return (
+    texto +
+    `\n\n[guardrail] ${achados.length} segredo(s) redigido(s) na saida de "${tool}": ` +
+    `${achados.join(", ")}. O valor nao entra no contexto — use o nome da variavel.`
+  )
 }
