@@ -59,6 +59,12 @@
       "**/.ssh/**": "deny",
       "**/.aws/credentials": "deny"
     },
+    // A esteira precisa se ler (templates, procedimento) mesmo rodando dentro
+    // de um projeto — sem isto o /integrar e auto-rejeitado em modo nao-interativo.
+    "external_directory": {
+      "*": "ask",
+      "{env:HOME}/.esteira/**": "allow"
+    },
     "bash": {
       "*": "allow",
       "rm *": "ask",

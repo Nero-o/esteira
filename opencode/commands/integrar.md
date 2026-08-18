@@ -1,6 +1,6 @@
 ---
 description: Integra o projeto atual na esteira — gera AGENTS.md e .esteira/ com dados verificados
-agent: arquiteto
+agent: integrador
 ---
 
 # Projeto
@@ -19,27 +19,41 @@ Manifestos encontrados:
 Contexto de IA já existente:
 !`ls AGENTS.md CLAUDE.md .cursorrules .github/copilot-instructions.md .esteira 2>/dev/null || echo "nenhum"`
 
+---
+
+# Procedimento
+
+!`cat ~/.esteira/INTEGRACAO.md 2>/dev/null || echo "(INTEGRACAO.md nao encontrado — rode: esteira sync)"`
+
+---
+
+# Template de AGENTS.md
+
+!`cat ~/.esteira/templates/AGENTS.md 2>/dev/null`
+
+# Template de .esteira/projeto.md
+
+!`cat ~/.esteira/templates/projeto.md 2>/dev/null`
+
+# Template de .esteira/guardrails.md
+
+!`cat ~/.esteira/templates/guardrails.md 2>/dev/null`
+
+---
+
 # Instrução
 
-Execute o procedimento de `~/.esteira/INTEGRACAO.md` neste projeto.
-Leia esse arquivo primeiro — ele tem os 7 passos com critério de pronto em cada um.
+Execute o procedimento acima neste projeto. Ele veio inteiro no prompt — você não
+precisa (nem deve) ler nada fora do diretório do projeto.
 
-Resumo do que ele pede:
+Preencha os três templates com o que **verificou abrindo arquivo**. Todo marcador
+`<PREENCHER: ...>` some, virando conteúdo real ou `<NAO ENCONTRADO>`.
 
-1. Reconhecer o terreno (manifestos, CI, contexto de IA existente)
-2. Extrair os comandos **reais** — de `package.json`/`Makefile`/CI, nunca de memória
-3. Mapear a arquitetura com `arquivo:linha`
-4. Identificar as zonas sensíveis que **existem**
-5. Preencher os templates de `~/.esteira/templates/` em `AGENTS.md` e `.esteira/`
-6. Rodar os comandos que forem seguros e corrigir os que falharem
-7. Relatar o que ficou `<NAO ENCONTRADO>`
+Delegue o levantamento a `@mapeador` e use a ferramenta `claude` para o perfil
+arquitetural — depois confira você mesmo cada comando e cada caminho que eles
+devolverem.
 
-Delegue o mapeamento a `@mapeador` e use a ferramenta `claude` para o perfil
-arquitetural — ele lê o repositório por conta própria. Se quiser conferência
-cruzada dos comandos, chame `claude` e `codex` na mesma rodada.
+**Não invente.** Comando que você não encontrou vira `<NAO ENCONTRADO>`.
 
-**Não invente.** Comando que você não encontrou vira `<NAO ENCONTRADO>`. Um
-`AGENTS.md` com comando inventado faz todo agente futuro errar com confiança —
-é o pior resultado possível deste comando.
-
+Grave `AGENTS.md`, `.esteira/projeto.md`, `.esteira/guardrails.md` e crie `.plans/`.
 Não commite e não dê push.
