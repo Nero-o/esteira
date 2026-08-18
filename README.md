@@ -45,16 +45,17 @@ executar e bloqueia em três camadas:
 
 | Camada | Bloqueia |
 |---|---|
-| **Disco** | ler, escrever ou buscar em `.env`, `*.pem`, `id_rsa`, `.aws/credentials`, `.ssh/` |
+| **Disco** | ler, escrever ou buscar em `.env`, `*.pem`, `id_rsa`, `.aws/credentials`, `.ssh/` — inclusive por `bash` e por `apply_patch` |
 | **Shell** | `rm -rf /`, `curl \| bash`, `chmod 777`, `git push --force`, e comando de rede que cite arquivo de segredo |
-| **Saída** | qualquer segredo indo para as ferramentas `claude`/`codex` ou para `webfetch` — chave de API, token, chave privada, JWT, connection string com senha |
+| **Saída** | qualquer segredo indo para as ferramentas `claude`/`codex`, `task` ou `webfetch` — chave de API, token, chave privada, JWT, connection string com senha |
+| **Retorno** | segredo que **volta** de qualquer ferramenta é redigido antes de entrar no contexto — um CLI pode ser mandado ler um segredo com um prompt perfeitamente limpo |
 
 A camada de saída é a que justifica as outras: `claude` e `codex` sobem **outro
 processo**, e `webfetch` fala com a internet. O que passa dali saiu do seu controle.
 
 `.env.example` e chave pública continuam legíveis — a precisão importa, porque
 guardrail que atrapalha é guardrail que a pessoa desliga. A matriz em
-`opencode/plugins/lib/padroes.test.mjs` cobre 113 casos, e quase metade deles são
+`opencode/plugins/lib/padroes.test.mjs` cobre 148 casos, e quase metade deles são
 coisas que **devem passar**: `postgres://user:password@host` de README, SHA de
 commit, UUID, `rm -rf node_modules`, prompt que menciona `.env` sem conter segredo.
 
@@ -173,9 +174,10 @@ opencode run --agent revisor "revise o diff de HEAD"
 |-------------|------------------------|------------------------------------------|
 | `arquiteto` | `openai/gpt-5.6-sol`   | maestro; delega, critica, consolida      |
 | `mapeador`  | `openai/gpt-5.4-mini`  | lê o codebase, devolve mapa factual      |
-| `cetico`    | `openai/gpt-5.3-codex` | ataca um plano, veredito GO/NO-GO        |
-| `executor`  | `openai/gpt-5.3-codex` | implementa um passo por vez              |
-| `revisor`   | `openai/gpt-5.3-codex` | revisa o diff (passa pelo Claude antes)  |
+| `integrador`| `openai/gpt-5.6-sol`   | prepara um projeto para a esteira        |
+| `cetico`    | `openai/gpt-5.6-sol`   | ataca um plano, veredito GO/NO-GO        |
+| `executor`  | `openai/gpt-5.6-sol`   | implementa um passo por vez              |
+| `revisor`   | `openai/gpt-5.6-sol`   | revisa o diff (passa pelo Claude antes)  |
 
 | Ferramenta | Roda em         | Quando                               |
 |------------|-----------------|--------------------------------------|

@@ -42,6 +42,14 @@ cmd_save() {
     ok "nada mudou"
     return
   fi
+
+  # Mostra o que vai embora ANTES de commitar. Sem isto, um `save` distraido
+  # publica o que estava pela metade com a mensagem errada.
+  echo "${B}vai commitar:${Z}"
+  git -C "$ESTEIRA_HOME" diff --cached --stat | sed 's/^/  /'
+  echo "${B}mensagem:${Z} $msg"
+  echo
+
   git -C "$ESTEIRA_HOME" commit -m "$msg"
   if git -C "$ESTEIRA_HOME" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
     git -C "$ESTEIRA_HOME" push
@@ -78,7 +86,7 @@ cmd_status() {
   echo
   echo "${B}agentes${Z}"
   opencode agent list 2>/dev/null \
-    | grep -E '^(arquiteto|mapeador|cetico|executor|revisor) \(' | sed 's/^/       /' \
+    | grep -E '^(arquiteto|integrador|mapeador|cetico|executor|revisor) \(' | sed 's/^/       /' \
     || bad "nenhum agente da esteira carregado"
 
   echo
@@ -101,7 +109,7 @@ cmd_doctor() {
   [[ -L "$cfg" && -e "$cfg" ]] || { bad "config nao ligada ao repo"; falhas=$((falhas+1)); }
 
   if out="$(opencode agent list 2>&1)"; then
-    for a in arquiteto mapeador cetico executor revisor; do
+    for a in arquiteto integrador mapeador cetico executor revisor; do
       grep -qE "^$a \(" <<<"$out" || { bad "agente '$a' nao carregou"; falhas=$((falhas+1)); }
     done
   else
@@ -174,7 +182,7 @@ cmd_doctor() {
         const c = JSON.parse(process.argv[1] || "{}")
         const pol = (c.experimental?.policies || []).some(
           p => p.action === "provider.use" && p.effect === "deny" && p.resource === "anthropic")
-        const gr = (c.instructions || []).some(i => i.endsWith("guardrails.md"))
+        const gr = (c.instructions || []).some(i => i.endsWith("opencode/guardrails.md"))
         console.log((pol ? "ok" : "falta") + " " + (gr ? "ok" : "falta"))
       ' "$resolvida" 2>/dev/null || echo "falta falta")"
       local pol gr; read -r pol gr <<<"$saida"
